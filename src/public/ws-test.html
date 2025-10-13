@@ -1,0 +1,25 @@
+<!doctype html><html><body>
+<h3>WS Test</h3>
+<input id="token" placeholder="Bearer token" style="width:420px">
+<input id="project" placeholder="project id">
+<button id="connect">Connect</button>
+<button id="join">Join Project</button>
+<pre id="log"></pre>
+<script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
+<script>
+let socket; const log=m=>document.getElementById('log').textContent+=m+'\n';
+document.getElementById('connect').onclick=()=>{
+  const t=document.getElementById('token').value.trim();
+  socket=io('http://localhost:4000',{auth:{token:t}});
+  socket.on('connect',()=>log('connected '+socket.id));
+  socket.on('joined',d=>log('joined '+d.room));
+  socket.on('task:created',d=>log('task:created '+JSON.stringify(d)));
+  socket.on('task:updated',d=>log('task:updated '+JSON.stringify(d)));
+  socket.on('task:deleted',d=>log('task:deleted '+JSON.stringify(d)));
+  socket.on('connect_error',e=>log('connect_error: '+e.message));
+};
+document.getElementById('join').onclick=()=>{
+  const pid=document.getElementById('project').value.trim();
+  socket.emit('join:project', pid);
+};
+</script></body></html>
