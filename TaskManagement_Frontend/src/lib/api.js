@@ -1,45 +1,43 @@
 // src/lib/api.js
-const USE_MOCK = true; // backend'e bağlandığında false yap
-
-// --- gerçek axios config ---
 import axios from "axios";
+
+/** Backend hazır olunca FALSE yap. */
+const USE_MOCK = true;
+
 export const api = axios.create({
   baseURL: import.meta.env.VITE_API_URL || "http://localhost:4000/api",
 });
 
-// --- mock veriler ---
-const mockData = {
-  "/auth/login": { user: { id: 1, email: "test@mirox.com" }, accessToken: "fake-token" },
-  "/projects": [
-    { id: 1, name: "Web Panel", client_name: "ACME Ltd.", manager_username: "Sümeyye", created_at: "2025-10-17" },
-    { id: 2, name: "Mobil Uygulama", client_name: "TechNova", manager_username: "Ali", created_at: "2025-10-15" },
-  ],
-  "/projects/1": { id: 1, name: "Web Panel", description: "Yönetici arayüzü geliştirmesi" },
-  "/tasks": [
-    { id: 1, title: "Login ekranı", status: "done", dueDate: "2025-10-20" },
-    { id: 2, title: "Dashboard tasarımı", status: "todo" },
-  ],
+// ---- MOCK DB ----
+const seed = {
+  user: { id: 1, email: "admin@mirox.com", username: "Admin", role: "admin" },
 };
 
-// --- mock handler ---
-api.mockGet = async (url) => {
-  console.log("[MOCK GET]", url);
-  await new Promise((r) => setTimeout(r, 300)); // gecikme efekti
-  if (mockData[url]) return { data: mockData[url] };
-  if (url.startsWith("/projects/")) return { data: mockData["/projects/1"] };
-  if (url.startsWith("/tasks")) return { data: mockData["/tasks"] };
-  throw new Error("Mock veri bulunamadı: " + url);
-};
+async function delay(ms = 300) {
+  return new Promise((r) => setTimeout(r, ms));
+}
 
 api.mockPost = async (url, body) => {
-  console.log("[MOCK POST]", url, body);
-  await new Promise((r) => setTimeout(r, 300));
-  if (url === "/auth/login") return { data: mockData["/auth/login"] };
+  await delay();
+  if (url === "/auth/login") {
+    if (body.email === "admin@mirox.com" && body.password === "123456") {
+      return { data: { user: seed.user, accessToken: "fake-token" } };
+    }
+    const e = new Error("E-posta veya şifre hatalı");
+    e.response = { status: 401, data: { message: e.message } };
+    throw e;
+  }
   return { data: { success: true } };
 };
 
-// --- proxy wrapper ---
+api.mockGet = async (url) => {
+  await delay();
+  if (url === "/health") return { data: { ok: true, mode: "mock" } };
+  throw new Error("MOCK GET bilinmeyen url: " + url);
+};
+
+/** Dışarıya tek kapı */
 export const useApi = {
-  get: (...args) => (USE_MOCK ? api.mockGet(...args) : api.get(...args)),
-  post: (...args) => (USE_MOCK ? api.mockPost(...args) : api.post(...args)),
+  post: (url, body, cfg) => (USE_MOCK ? api.mockPost(url, body, cfg) : api.post(url, body, cfg)),
+  get: (url, cfg) => (USE_MOCK ? api.mockGet(url, cfg) : api.get(url, cfg)),
 };

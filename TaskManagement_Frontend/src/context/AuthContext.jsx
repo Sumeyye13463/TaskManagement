@@ -1,3 +1,4 @@
+// src/context/AuthContext.jsx
 import React, { createContext, useContext, useEffect, useState } from "react";
 import { useApi } from "../lib/api";
 
@@ -13,7 +14,7 @@ export function AuthProvider({ children }) {
 
   async function login(email, password) {
     const res = await useApi.post("/auth/login", { email, password });
-    const payload = res.data.user;
+    const payload = res.data.user; // { id, email, username, role }
     setUser(payload);
     localStorage.setItem("pm.user", JSON.stringify(payload));
   }
