@@ -176,6 +176,8 @@ ALTER TABLE public.users
   ALTER TABLE public.users
   DROP COLUMN IF EXISTS password; 
 
+INSERT INTO users (username, email) VALUES ('sumi', 'sumi@example.com') RETURNING id;
+
 SELECT id, email, mfa_enabled, mfa_secret
 FROM public.users
 WHERE email = 'sumi@example.com';
@@ -183,28 +185,131 @@ WHERE email = 'sumi@example.com';
 SELECT id, email FROM public.users
 WHERE email = 'sumi@example.com';
 
-SELECT id, name FROM public.projects WHERE id = 2;*/
+SELECT id, name FROM public.projects WHERE id = 2;
 
-INSERT INTO public.clients (name) VALUES ('Internal') RETURNING id;   
+INSERT INTO public.clients (name)
+VALUES ('Internal')
+ON CONFLICT (name) DO UPDATE
+SET name = EXCLUDED.name
+RETURNING id;
 
 INSERT INTO public.projects (client_id, name, description, manager_id)
-VALUES (3, 'Demo Project', 'Realtime test', 6)
-RETURNING id;                
+VALUES (
+  (SELECT id FROM public.clients WHERE name='Internal'),
+  'Demo Project',
+  'Realtime test',
+  (SELECT id FROM public.users WHERE email='sumi@example.com')
+)
+RETURNING id;
 
+UPDATE public.projects p
+SET manager_id = u.id
+FROM public.users u
+WHERE p.name = 'Demo Project'
+  AND u.email = 'sumi@example.com'
+RETURNING p.*;              
+
+--burada manager_email = sumi@example.com, client_name = Internal görüyorsan her şey yolunda demektir.
+SELECT p.id, p.name, u.email AS manager_email, c.name AS client_name
+FROM public.projects p
+JOIN public.users u   ON u.id = p.manager_id
+JOIN public.clients c ON c.id = p.client_id
+WHERE p.name = 'Demo Project';
+
+--Projeye “owner” üye ekle
 INSERT INTO public.project_members (project_id, user_id, role)
-VALUES (3, 6, 'owner')
-ON CONFLICT DO NOTHING;
+SELECT p.id, u.id, 'owner'
+FROM public.projects p
+JOIN public.users u ON u.email='sumi@example.com'
+WHERE p.name='Demo Project'
+ON CONFLICT (project_id, user_id) DO UPDATE SET role = EXCLUDED.role
+RETURNING *;
 
-SELECT project_id, user_id, role
-FROM public.project_members
-WHERE project_id = 5 AND user_id = 6;
+--Etiket oluştur (General)
+INSERT INTO public.labels (project_id, name, color_hex)
+SELECT p.id, 'General', '#808080'
+FROM public.projects p
+WHERE p.name='Demo Project'
+ON CONFLICT (project_id, name) DO UPDATE SET color_hex = EXCLUDED.color_hex
+RETURNING *;
 
-INSERT INTO public.project_members (project_id, user_id, role)
-VALUES (3, 6, 'member')
-ON CONFLICT DO NOTHING;
+--Görev oluştur
+INSERT INTO public.tasks (project_id, title, status)
+SELECT p.id, 'İlk görev', 'todo'
+FROM public.projects p
+WHERE p.name='Demo Project'
+RETURNING *;
 
-SELECT project_id, user_id, role
-FROM public.project_members
-WHERE project_id = 3 AND user_id = 6;
+--Göreve atama yap
+INSERT INTO public.task_assignees (task_id, user_id)
+SELECT t.id, u.id
+FROM public.tasks t
+JOIN public.projects p ON p.id = t.project_id
+JOIN public.users u    ON u.email='sumi@example.com'
+WHERE p.name='Demo Project' AND t.title='İlk görev'
+ON CONFLICT (task_id, user_id) DO UPDATE SET assigned_at = NOW()
+RETURNING *;
 
-SELECT id, manager_id FROM public.projects WHERE id = 3;
+--Göreve etiket ekle
+INSERT INTO public.task_labels (task_id, label_id)
+SELECT t.id, l.id
+FROM public.tasks  t
+JOIN public.projects p ON p.id = t.project_id
+JOIN public.labels  l ON l.project_id = p.id AND l.name='General'
+WHERE p.name='Demo Project' AND t.title='İlk görev'
+ON CONFLICT DO NOTHING
+RETURNING *;
+
+--Projedeki görevleri, atanan kullanıcıları ve etiketleri listele
+SELECT
+  p.name            AS project,
+  t.title           AS task,
+  t.status,
+  u.username        AS assigned_to,
+  string_agg(DISTINCT l.name, ', ') AS labels
+FROM public.projects p
+JOIN public.tasks t         ON t.project_id = p.id
+LEFT JOIN public.task_assignees ta ON ta.task_id = t.id
+LEFT JOIN public.users u           ON u.id = ta.user_id
+LEFT JOIN public.task_labels tl    ON tl.task_id = t.id
+LEFT JOIN public.labels l          ON l.id = tl.label_id
+WHERE p.name='Demo Project'
+GROUP BY p.name, t.title, t.status, u.username
+ORDER BY t.title;
+
+
+
+--tablo ve kolon doğrulama sorgusu
+WITH expected(table_name, column_name) AS (
+  VALUES
+  -- clients
+  ('clients','id'), ('clients','name'), ('clients','contact_name'),
+  ('clients','contact_email'), ('clients','created_at'), ('clients','updated_at'),
+
+  -- labels
+  ('labels','id'), ('labels','project_id'), ('labels','name'),
+  ('labels','color_hex'), ('labels','created_at'),
+
+  -- tasks (koda göre kullanılanlar)
+  ('tasks','id'), ('tasks','title'), ('tasks','status'),
+  ('tasks','created_at'), ('tasks','updated_at'),
+
+  -- task_assignees
+  ('task_assignees','task_id'), ('task_assignees','user_id'), ('task_assignees','assigned_at'),
+
+  -- task_labels
+  ('task_labels','task_id'), ('task_labels','label_id'),
+
+  -- users (koda göre kullanılanlar)
+  ('users','id'), ('users','username'), ('users','email'), ('users','title')
+
+  -- İstersen projects / project_members için de detay ekleyebilirsin
+)
+SELECT e.table_name, e.column_name,
+       CASE WHEN c.column_name IS NULL THEN 'MISSING' ELSE 'OK' END AS status
+FROM expected e
+LEFT JOIN information_schema.columns c
+  ON c.table_schema = 'public'
+ AND c.table_name  = e.table_name
+ AND c.column_name = e.column_name
+ORDER BY e.table_name, e.column_name;*/

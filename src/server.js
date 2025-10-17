@@ -13,3 +13,5 @@ initSocket(server);                          // socket.io’yu http server’a b
 server.listen(PORT, () => {
   console.log(`Server running → http://localhost:${PORT}`);
 });
+
+console.log('CWD →', process.cwd());
