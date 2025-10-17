@@ -1,0 +1,29 @@
+# Node / JS
+node_modules/
+npm-debug.log*
+yarn*.log*
+pnpm-debug.log*
+
+# Build çıktıları
+dist/
+build/
+.cache/
+.tmp/
+coverage/
+
+# Vite / React
+.vite/
+*.local
+
+# Env / secret
+.env
+.env.*
+!.env.example
+
+# Editor
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
