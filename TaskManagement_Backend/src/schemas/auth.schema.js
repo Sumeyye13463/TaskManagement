@@ -1,43 +1,33 @@
 // src/schemas/auth.schema.js
 const { z } = require("zod");
 
-const passwordPolicy = z.string()
-  .min(8, "Parola en az 8 karakter olmalı")
-  .regex(/[a-z]/, "En az bir küçük harf içermeli")
-  .regex(/[A-Z]/, "En az bir büyük harf içermeli")
-  .regex(/[0-9]/, "En az bir rakam içermeli")
-  .regex(/[^A-Za-z0-9]/, "En az bir özel karakter içermeli");
-
-const registerSchema = z.object({
-  body: z.object({
-    username: z.string().min(3, "Kullanıcı adı en az 3 karakter"),
-    email: z.string().email("Geçerli bir e-posta girin"),
-    password: passwordPolicy
-  })
-});
+// yardımcı: sayısal 6 haneli kod
+const sixDigitCode = z.string().regex(/^\d{6}$/, "Kod 6 haneli olmalı");
 
 const loginSchema = z.object({
-  body: z.object({
-    email: z.string().email(),
-    password: z.string().min(1),
-    otp: z.string().optional() // MFA aktifse login’de gelebilir
-  })
+  email: z.string().email(),
+  password: z.string().min(6),
 });
 
-const mfaSetupSchema = z.object({
-  // setup çağrısı body istemez; JWT’li kullanıcı
-  body: z.object({}).optional(),
+const registerSchema = z.object({
+  username: z.string().min(2),
+  email: z.string().email(),
+  password: z.string().min(6),
+  role: z.enum(["member", "manager", "admin"]).default("member"),
 });
 
-const mfaVerifySchema = z.object({
-  body: z.object({
-    token: z.string().min(6).max(6, "6 haneli kod girin")
-  })
+const firstLoginSchema = z.object({
+  token: z.string().min(10),
+  password: z.string().min(6),
 });
+
+const mfaSetupSchema = z.object({}); // body yoksa boş bırak
+const mfaVerifySchema = z.object({ code: sixDigitCode });
 
 module.exports = {
-  registerSchema,
   loginSchema,
+  registerSchema,
   mfaSetupSchema,
   mfaVerifySchema,
+  firstLoginSchema,
 };

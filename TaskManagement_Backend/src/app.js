@@ -5,7 +5,7 @@ const morgan = require('morgan');
 const { pool } = require('./db/pool');
 const api = require('./routes')
 const usersRouter = require('./routes/users.routes');
-const authRouter = require('./routes/auth.routes'); 
+
 
 
 const app = express();
@@ -18,7 +18,7 @@ app.use(morgan('dev'));
 
 app.use('/api', api);
 app.use('/api/users', usersRouter);
-app.use('/api/auth', authRouter); 
+app.use("/api/auth", require("./routes/auth.routes")); 
 
 app.get('/', (req, res) =>
   res.json({ ok: true, service: 'backend-projesi', endpoints: ['/health','/dbtest','/api/users'] })

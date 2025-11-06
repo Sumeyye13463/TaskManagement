@@ -1,30 +1,41 @@
-// src/context/AuthContext.jsx
+// örn. src/context/AuthContext.jsx
 import React, { createContext, useContext, useEffect, useState } from "react";
-import { useApi } from "../lib/api";
+import api from "../api/http"; // senin axios instance yolun
 
 const AuthContext = createContext(null);
 
 export function AuthProvider({ children }) {
-  const [user, setUser] = useState(null);
+  const [user, setUser] = useState(null);         // { email, role }
+  const [isAuthReady, setIsAuthReady] = useState(false);
 
   useEffect(() => {
-    const raw = localStorage.getItem("pm.user");
-    if (raw) setUser(JSON.parse(raw));
+    try {
+      const raw = localStorage.getItem("demo_user");
+      if (raw) setUser(JSON.parse(raw));
+    } finally {
+      setIsAuthReady(true);
+    }
   }, []);
 
-  async function login(email, password) {
-    const res = await useApi.post("/auth/login", { email, password });
-    const payload = res.data.user; // { id, email, username, role }
-    setUser(payload);
-    localStorage.setItem("pm.user", JSON.stringify(payload));
-  }
+  // Geçici yardımcılar (geliştirme için)
+  const loginAsAdmin = (email = "admin@example.com") => {
+    const u = { email, role: "admin" };
+    localStorage.setItem("demo_user", JSON.stringify(u));
+    setUser(u);
+  };
 
-  function logout() {
+  const logout = () => {
+    localStorage.removeItem("demo_user");
     setUser(null);
-    localStorage.removeItem("pm.user");
-  }
+  };
 
-  return <AuthContext.Provider value={{ user, login, logout }}>{children}</AuthContext.Provider>;
+  return (
+    <AuthContext.Provider
+      value={{ user, setUser, isAuthReady, loginAsAdmin, logout }}
+    >
+      {children}
+    </AuthContext.Provider>
+  );
 }
 
 export const useAuth = () => useContext(AuthContext);

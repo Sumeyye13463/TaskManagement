@@ -46,6 +46,8 @@ module.exports = router;*/
 const express = require('express');
 const router = express.Router();
 
+router.get('/health', (req, res) => res.json({ ok: true }));
+
 router.use('/users', require('./users.routes'));
 router.use('/clients', require('./clients.routes'));
 router.use('/projects', require('./projects.routes'));

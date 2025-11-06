@@ -1,26 +1,23 @@
-import { Routes, Route, Navigate } from "react-router-dom";
-import AppLayout from "./layouts/AppLayout";
-import Login from "./pages/Login";
-import Dashboard from "./pages/Dashboard";
-import ProtectedRoute from "./components/ProtectedRoute";
+import { Routes, Route } from "react-router-dom";
+import Landing from "./pages/Landing";
+import AdminLayout from "./layouts/AdminLayout";
+import AdminHome from "./pages/Admin/AdminHome";
+import AdminUsers from "./pages/Admin/AdminUsers";
+import AdminLogin from "./pages/Admin/AdminLogin";
+import "./style.css"; 
 
 export default function App() {
   return (
     <Routes>
-      <Route path="/login" element={<Login />} />
+      <Route path="/" element={<Landing />} />
+      <Route path="/admin/login" element={<AdminLogin />} />
 
-      <Route
-        path="/"
-        element={
-          <ProtectedRoute>
-            <AppLayout />
-          </ProtectedRoute>
-        }
-      >
-        <Route index element={<Dashboard />} />
+      <Route path="/admin" element={<AdminLayout />}>
+        <Route index element={<AdminHome />} />
+        <Route path="users" element={<AdminUsers />} />
       </Route>
 
-      <Route path="*" element={<Navigate to="/" replace />} />
+      <Route path="*" element={<div>Not Found</div>} />
     </Routes>
   );
 }

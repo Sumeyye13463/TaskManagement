@@ -312,4 +312,17 @@ LEFT JOIN information_schema.columns c
   ON c.table_schema = 'public'
  AND c.table_name  = e.table_name
  AND c.column_name = e.column_name
-ORDER BY e.table_name, e.column_name;*/
+ORDER BY e.table_name, e.column_name;
+
+SELECT * FROM users WHERE email = 'veli@mirox.com';
+
+ALTER TABLE users
+ADD COLUMN phone VARCHAR(20);
+
+SELECT * FROM users WHERE email = 'sumeyyee@mirox.com'
+
+SELECT id, username, email, role, title, phone, is_active FROM users ORDER BY id DESC;*/
+
+SELECT id, email FROM public.users WHERE email ILIKE '%gmail.com';
+
+DELETE FROM users WHERE email = 's7m36635901l@gmail.com';

@@ -1,27 +1,28 @@
-// src/routes/auth.routes.js
 const express = require("express");
 const router = express.Router();
 
 const validate = require("../middlewares/validate");
-const { authGuard, requireRole, requireProjectMember } = require('../middlewares/auth.middleware');
+const { authGuard } = require("../middlewares/auth.middleware");
+const { login, mfaSetup, mfaVerify, mfaDisable, mfaSetupByInvite, register, registerAdmin, firstLoginSetPassword } =
+  require("../controllers/auth.controller");
 
-const {
-  registerSchema,
-  loginSchema,
-  mfaSetupSchema,
-  mfaVerifySchema,
-} = require("../schemas/auth.schema");
-
-const {
-  register, login, mfaSetup, mfaVerify, mfaDisable
-} = require("../controllers/auth.controller");
+const { loginSchema, registerSchema, mfaSetupSchema, mfaVerifySchema, firstLoginSchema  } =
+  require("../schemas/auth.schema");
 
 router.post("/register", validate(registerSchema), register);
-router.post("/login",    validate(loginSchema),    login);
+router.post("/register-admin", validate(registerSchema), registerAdmin);
+router.post("/login", validate(loginSchema), login);
 
-// MFA
-router.post("/mfa/setup",  authGuard, validate(mfaSetupSchema), mfaSetup);
+router.post("/mfa/setup", authGuard, validate(mfaSetupSchema), mfaSetup);
 router.post("/mfa/verify", authGuard, validate(mfaVerifySchema), mfaVerify);
 router.post("/mfa/disable", authGuard, mfaDisable);
+
+router.post("/mfa/setup-by-invite", mfaSetupByInvite);
+
+router.post(
+  "/first-login",
+  validate(firstLoginSchema),
+ firstLoginSetPassword   // ← doğru çağrı
+);
 
 module.exports = router;
