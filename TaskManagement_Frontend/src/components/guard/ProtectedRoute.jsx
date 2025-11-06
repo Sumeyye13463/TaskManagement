@@ -7,5 +7,5 @@ export default function ProtectedRoute({ children }) {
   // LocalStorage -> Context hydrate olmadan karar verme
   if (!isAuthReady) return null;
 
-  return accessToken ? children : <Navigate to="/" replace />;
+  return accessToken ? children : <Navigate to="/login" replace />;
 }
