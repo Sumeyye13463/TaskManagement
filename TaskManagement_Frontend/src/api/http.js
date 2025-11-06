@@ -1,39 +1,34 @@
+// src/api/http.js
 import axios from "axios";
+
 const api = axios.create({ baseURL: "http://localhost:4000/api" });
 
+// 🔐 Authorization & JSON header (tek interceptor)
 api.interceptors.request.use((config) => {
-  const raw = localStorage.getItem("pm.auth");
-  if (raw) {
-    const { accessToken } = JSON.parse(raw);
-    if (accessToken) config.headers.Authorization = `Bearer ${accessToken}`;
-  }
-  return config;
-});
-// → Authorization header
-api.interceptors.request.use((config) => {
-  // Her iki ihtimali de destekle (sen bazen 'accessToken', bazen 'pm.auth' kullanmışsın)
+  // 1) pm.auth içinden token (tercihli)
   const rawAuth = localStorage.getItem("pm.auth");
-  const accessToken =
-    JSON.parse(rawAuth || "{}")?.accessToken ||
-    localStorage.getItem("accessToken");
+  const tokenFromPmAuth = rawAuth ? JSON.parse(rawAuth)?.accessToken : null;
 
-  if (accessToken) {
-    config.headers.Authorization = `Bearer ${accessToken}`;
+  // 2) fallback: accessToken anahtarından
+  const token = tokenFromPmAuth || localStorage.getItem("accessToken");
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`;
   }
 
-  // Güven olsun diye POST/PUT/PATCH isteklerinde JSON header’ı koru
-  if (["post", "put", "patch"].includes((config.method || "").toLowerCase())) {
+  // Yazma isteklerinde JSON header'ı koru
+  const method = (config.method || "").toLowerCase();
+  if (["post", "put", "patch"].includes(method)) {
     config.headers["Content-Type"] = "application/json";
   }
   return config;
 });
 
-// (isteğe bağlı) gelen 400 hatalarında backend'den gelen detayları konsola yaz
+// (opsiyonel) 400 hata detayını konsola yaz (teşhis kolaylığı)
 api.interceptors.response.use(
   (r) => r,
   (err) => {
-    if (err?.response?.status === 400) {
-      // teşhis için
+    const status = err?.response?.status;
+    if (status === 400) {
       // eslint-disable-next-line no-console
       console.log("HTTP 400 →", err.response.data);
     }

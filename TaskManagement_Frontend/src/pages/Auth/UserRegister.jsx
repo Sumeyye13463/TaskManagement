@@ -15,16 +15,29 @@ export default function UserRegister() {
   const change = (e) =>
     setForm((f) => ({ ...f, [e.target.name]: e.target.value }));
 
-  const submit = async (e) => {
-    e.preventDefault();
-    setErr("");
+  // src/pages/Auth/UserRegister.jsx (submit içinde)
+const submit = async (e) => {
+  e.preventDefault();
+  setErr("");
 
-    if (!form.email || !form.password) {
-      return setErr("E-posta ve şifre gerekli");
-    }
-    if (form.password !== form.confirm) {
-      return setErr("Şifreler eşleşmiyor");
-    }
+  if (!form.email || !form.password) return setErr("E-posta ve şifre gerekli");
+  if (form.password !== form.confirm) return setErr("Şifreler eşleşmiyor");
+
+  setLoading(true);
+  try {
+    // ✅ Artık gerçekten backend'e kayıt atıyoruz
+    await api.post("/auth/register", {
+      email: form.email,
+      password: form.password,
+    });
+
+    // kayıt başarılı → login sayfasına
+    navigate("/login", { replace: true });
+  } catch (e) {
+    setErr(e?.response?.data?.message || "Kayıt başarısız");
+  } finally {
+    setLoading(false);
+  }
 
     setLoading(true);
     try {

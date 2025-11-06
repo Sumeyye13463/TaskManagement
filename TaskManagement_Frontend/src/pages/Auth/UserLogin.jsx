@@ -1,76 +1,134 @@
+// src/pages/Auth/UserLogin.jsx
 import { useState } from "react";
-import { useNavigate, Link } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import api from "../../api/http";
 import { useAuth } from "../../context/AuthContext";
 
 export default function UserLogin() {
   const navigate = useNavigate();
-  const { setUser } = useAuth();
+  const { login } = useAuth(); // varsa context login'i de çağıracağız
+
   const [form, setForm] = useState({ email: "", password: "" });
-  const [err, setErr] = useState("");
   const [loading, setLoading] = useState(false);
+  const [err, setErr] = useState("");
 
   const change = (e) => setForm((f) => ({ ...f, [e.target.name]: e.target.value }));
 
-  const handleSubmit = async (e) => {
+  const submit = async (e) => {
     e.preventDefault();
-    setErr(""); setLoading(true);
+    setErr("");
+    if (!form.email || !form.password) {
+      return setErr("E-posta ve şifre gerekli");
+    }
+    setLoading(true);
     try {
-      // DEMO:
-      const email = form.email || "user@example.com";
-      const role = "project_manager";
-      setUser({ email, role });
-      localStorage.setItem("demo_user", JSON.stringify({ email, role }));
+      const { data } = await api.post("/auth/login", {
+        email: form.email,
+        password: form.password,
+      });
+      // Backend yanıtı ör: { accessToken, user: { id, email, role } }
+      const accessToken =
+        data?.accessToken || data?.token || data?.data?.accessToken;
+      const user = data?.user || data?.data?.user;
+
+      if (!accessToken) throw new Error("Token alınamadı");
+
+      // Token'ı sakla ve axios default header'a koy
+      localStorage.setItem("accessToken", accessToken);
+      api.defaults.headers.common.Authorization = `Bearer ${accessToken}`;
+
+      // Context varsa bilgilendir
+      if (typeof login === "function") {
+        login({ user, accessToken });
+      }
+
       navigate("/pm/projects", { replace: true });
-    } catch {
-      setErr("Giriş başarısız");
-    } finally { setLoading(false); }
+    } catch (e) {
+      setErr(e?.response?.data?.message || e.message || "Giriş başarısız");
+    } finally {
+      setLoading(false);
+    }
   };
 
+  // — Stil (AdminLogin/UserLogin kart görünümü ile aynı) —
   const pageStyle = {
-    position: "fixed", inset: 0, display: "grid", placeItems: "center",
-    background: "#1f1f1f", color: "#fff"
+    display: "grid",
+    placeItems: "center",
+    height: "100vh",
+    background: "#0e0f10",
+    color: "#fff",
   };
-  const formStyle = {
-    width: "100%", maxWidth: 400, background: "#2a2a2a",
-    padding: 24, borderRadius: 12, boxShadow: "0 8px 24px rgba(0,0,0,.3)",
-    display: "flex", flexDirection: "column", gap: 12,
+  const cardStyle = {
+    background: "#222526",
+    padding: "2rem",
+    borderRadius: "16px",
+    boxShadow: "0 24px 60px rgba(0,0,0,.45)",
+    width: "100%",
+    maxWidth: 520,
+    display: "flex",
+    flexDirection: "column",
+    gap: "1rem",
   };
   const inputStyle = {
-    background: "#1e1e1e", color: "#fff", border: "1px solid #333",
-    padding: "12px 14px", borderRadius: 10, outline: "none",
+    background: "#111518",
+    border: "1px solid #333",
+    borderRadius: "12px",
+    color: "#fff",
+    padding: "12px 14px",
+    outline: "none",
+    width: "100%",
   };
   const btnStyle = {
-    background: "#0e7c66", color: "#fff", padding: "10px 14px",
-    border: "none", borderRadius: 10, cursor: "pointer",
+    background: "#0e7c66",
+    color: "#fff",
+    border: "none",
+    padding: "12px",
+    borderRadius: "12px",
+    cursor: "pointer",
+    width: "100%",
   };
 
   return (
     <div style={pageStyle}>
-      <form onSubmit={handleSubmit} style={formStyle}>
-        <h2 style={{ textAlign: "center" }}>Kullanıcı Giriş</h2>
+      <form style={cardStyle} onSubmit={submit}>
+        <h1 style={{ textAlign: "center", marginBottom: "-0.5rem" }}>Mirox</h1>
+        <h3 style={{ textAlign: "center", marginTop: "-8px" }}>Kullanıcı Girişi</h3>
 
-        <input name="email" type="email" placeholder="Email"
-          value={form.email} onChange={change} style={inputStyle} required />
-        <input name="password" type="password" placeholder="Şifre"
-          value={form.password} onChange={change} style={inputStyle} required />
+        <label>
+          E-posta
+          <input
+            name="email"
+            type="email"
+            value={form.email}
+            onChange={change}
+            style={inputStyle}
+            placeholder="ornek@mail.com"
+          />
+        </label>
 
-        {err && (
-          <div style={{ color: "salmon", textAlign: "center", fontSize: 14 }}>
-            {err}
-          </div>
-        )}
+        <label>
+          Şifre
+          <input
+            name="password"
+            type="password"
+            value={form.password}
+            onChange={change}
+            style={inputStyle}
+            placeholder="••••••••"
+          />
+        </label>
 
-        <button type="submit" disabled={loading} style={btnStyle}>
-          {loading ? "Giriş yapılıyor..." : "Giriş"}
+        {err && <div style={{ color: "salmon" }}>{err}</div>}
+
+        <button disabled={loading} type="submit" style={btnStyle}>
+          {loading ? "Giriş yapılıyor…" : "Giriş Yap"}
         </button>
 
-        {/* ✅ Register linki */}
-        <p style={{ textAlign: "center", fontSize: 14, marginTop: 8 }}>
+        <p style={{ textAlign: "center", marginTop: 8 }}>
           Hesabınız yok mu?{" "}
-          <Link to="/register" style={{ color: "#10b981", textDecoration: "none" }}>
+          <a href="/register" style={{ color: "#10b981", textDecoration: "none" }}>
             Kayıt olun
-          </Link>
+          </a>
         </p>
       </form>
     </div>

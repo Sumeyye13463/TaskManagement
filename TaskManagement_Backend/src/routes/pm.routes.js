@@ -1,16 +1,12 @@
 // src/routes/pm.routes.js
-const router = require('express').Router();
-const auth = require('../middlewares/auth');        // sende mevcut
-const requireRole = require('../middlewares/requireRole');
-const pm = require('../controllers/pm.controller');
+const router = require("express").Router();
 
-router.use(auth, requireRole('project_manager', 'admin'));
+// ⚠️ Burada auth/role eklemiyoruz; her alt router kendi içinde yönetiyor.
+// Böylece mevcut projects.routes.js'teki authGuard / requireRole aynen çalışmaya devam eder.
 
-// Projects
-router.get('/projects', pm.listProjects);
-router.post('/projects', pm.createProject);
-router.get('/projects/:id', pm.getProject);
-router.put('/projects/:id', pm.updateProject);
-router.delete('/projects/:id', pm.archiveProject);
+router.use("/projects", require("./projects.routes"));
+router.use("/tasks",    require("./tasks.routes"));
+router.use("/labels",   require("./labels.routes"));
+router.use("/clients",  require("./clients.routes"));
 
 module.exports = router;
