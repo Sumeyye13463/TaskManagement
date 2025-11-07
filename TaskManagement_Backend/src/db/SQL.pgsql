@@ -323,6 +323,6 @@ SELECT * FROM users WHERE email = 'sumeyyee@mirox.com'
 
 SELECT id, username, email, role, title, phone, is_active FROM users ORDER BY id DESC;*/
 
-SELECT id, email FROM public.users WHERE email ILIKE '%gmail.com';
+SELECT username, id, email FROM public.users WHERE email ILIKE 'sumeyye@mirox.com';
 
 DELETE FROM users WHERE email = 's7m36635901l@gmail.com';

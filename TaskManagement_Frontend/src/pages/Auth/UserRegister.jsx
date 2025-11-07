@@ -8,7 +8,7 @@ export default function UserRegister() {
   const navigate = useNavigate();
   const { setUser } = useAuth();
 
-  const [form, setForm] = useState({ email: "", password: "", confirm: "" });
+  const [form, setForm] = useState({ username: "", email: "", password: "", confirm: "" });
   const [err, setErr] = useState("");
   const [loading, setLoading] = useState(false);
 
@@ -16,49 +16,41 @@ export default function UserRegister() {
     setForm((f) => ({ ...f, [e.target.name]: e.target.value }));
 
   // src/pages/Auth/UserRegister.jsx (submit içinde)
+// src/pages/Auth/UserRegister.jsx (submit fonksiyonu)
+// src/pages/Auth/UserLogin.jsx
+// src/pages/Auth/UserRegister.jsx
 const submit = async (e) => {
   e.preventDefault();
   setErr("");
 
-  if (!form.email || !form.password) return setErr("E-posta ve şifre gerekli");
-  if (form.password !== form.confirm) return setErr("Şifreler eşleşmiyor");
+  if (!form.username || !form.email || !form.password || !form.confirm) {
+    return setErr("Tüm alanları doldurun");
+  }
+  if (form.password !== form.confirm) {
+    return setErr("Şifreler eşleşmiyor");
+  }
 
   setLoading(true);
   try {
-    // ✅ Artık gerçekten backend'e kayıt atıyoruz
-    await api.post("/auth/register", {
-      email: form.email,
+    const { data, status } = await api.post("/auth/register", {
+      username: form.username.trim(),
+      email: form.email.trim().toLowerCase(),
       password: form.password,
     });
 
-    // kayıt başarılı → login sayfasına
-    navigate("/login", { replace: true });
-  } catch (e) {
-    setErr(e?.response?.data?.message || "Kayıt başarısız");
+    if (status === 200 || status === 201) {
+      navigate("/login", { replace: true }); // kayıt sonrası login sayfası
+    }
+  } catch (err) {
+    const s = err?.response?.status;
+    if (s === 409) setErr("Bu e-posta veya kullanıcı adı zaten kayıtlı.");
+    else setErr(err?.response?.data?.message || err.message || "Kayıt başarısız");
   } finally {
     setLoading(false);
   }
+};
 
-    setLoading(true);
-    try {
-      // Backend hazırsa bunu kullan:
-      // await api.post("/auth/register", { email: form.email, password: form.password });
 
-      // DEMO (otomatik login gibi davranmak istersen):
-      const email = form.email;
-      const role = "project_manager";
-      setUser({ email, role });
-      localStorage.setItem("demo_user", JSON.stringify({ email, role }));
-
-      // İstersen kayıt sonrası giriş sayfasına da yönlendirebilirsin:
-      // navigate("/login", { replace: true });
-      navigate("/pm/projects", { replace: true });
-    } catch (e) {
-      setErr(e?.response?.data?.message || "Kayıt başarısız");
-    } finally {
-      setLoading(false);
-    }
-  };
 
   // ——— Stil: UserLogin/AdminLogin ile birebir kart görünüm ———
   const pageStyle = {
@@ -106,6 +98,20 @@ const submit = async (e) => {
         <h3 style={{ textAlign: "center", margin: 0 }}>Kullanıcı Kayıt</h3>
 
         <form onSubmit={submit} style={formStyle}>
+
+
+          <label style={labelStyle}>
+            Kullanıcı Adı
+            <input
+              name="username"
+              type="text"
+              value={form.username}
+              onChange={change}
+              style={inputStyle}
+              required
+            />
+          </label>        
+
           <label style={labelStyle}>
             Email
             <input

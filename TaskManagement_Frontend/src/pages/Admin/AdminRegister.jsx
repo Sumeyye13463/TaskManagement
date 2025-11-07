@@ -1,9 +1,10 @@
-import React from "react";
+import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useAuth } from "../../context/AuthContext";
 import { useNavigate } from "react-router-dom";
+import api from "../../api/http"; 
 
 const Schema = z
   .object({
@@ -34,18 +35,31 @@ export default function AdminRegister() {
     },
   });
 
-  const onSubmit = async (v) => {
-    try {
-      await registerAdmin({
-        username: v.adminName,
-        email: v.companyEmail,
-        password: v.password,
-      });
-      navigate("/admin", { replace: true });
-    } catch (e) {
-      console.error(e);
+      const [err, setErr] = useState("");
+      const [loading, setLoading] = useState(false); 
+
+// v: react-hook-form'un verdiği değerler
+const onSubmit = async (v) => {
+  setErr("");
+  setLoading(true);
+  try {
+    const res = await api.post("/auth/register", {
+      username: v.adminName.trim(),
+      email: v.companyEmail.trim().toLowerCase(),
+      password: v.password,
+    });
+    if (res.status === 200 || res.status === 201) {
+      navigate("/admin/login");
     }
-  };
+  } catch (e) {
+    const status = e?.response?.status;
+    if (status === 409) setErr("Bu e-posta veya kullanıcı adı zaten kayıtlı.");
+    else setErr(e?.response?.data?.message || "Kayıt başarısız");
+  } finally {
+    setLoading(false);
+  }
+};
+
 
   // 🎨 Stil tanımları
   const pageStyle = {

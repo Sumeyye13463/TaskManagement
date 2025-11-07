@@ -1,97 +1,102 @@
 // src/pages/Auth/UserLogin.jsx
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import api from "../../api/http";
 import { useAuth } from "../../context/AuthContext";
 
 export default function UserLogin() {
   const navigate = useNavigate();
-  const { login } = useAuth(); // varsa context login'i de çağıracağız
+  const { login } = useAuth();
 
   const [form, setForm] = useState({ email: "", password: "" });
-  const [loading, setLoading] = useState(false);
   const [err, setErr] = useState("");
+  const [loading, setLoading] = useState(false);
 
-  const change = (e) => setForm((f) => ({ ...f, [e.target.name]: e.target.value }));
+  const change = (e) =>
+    setForm((f) => ({ ...f, [e.target.name]: e.target.value }));
 
   const submit = async (e) => {
     e.preventDefault();
     setErr("");
+
     if (!form.email || !form.password) {
       return setErr("E-posta ve şifre gerekli");
     }
+
     setLoading(true);
     try {
-      const { data } = await api.post("/auth/login", {
-        email: form.email,
+      const { data, status } = await api.post("/auth/login", {
+        email: form.email.trim().toLowerCase(),
         password: form.password,
       });
-      // Backend yanıtı ör: { accessToken, user: { id, email, role } }
-      const accessToken =
-        data?.accessToken || data?.token || data?.data?.accessToken;
-      const user = data?.user || data?.data?.user;
 
-      if (!accessToken) throw new Error("Token alınamadı");
+      const token =
+        data?.accessToken ??
+        data?.token ??
+        data?.data?.accessToken ??
+        data?.data?.token;
 
-      // Token'ı sakla ve axios default header'a koy
-      localStorage.setItem("accessToken", accessToken);
-      api.defaults.headers.common.Authorization = `Bearer ${accessToken}`;
+      const user = data?.user ?? data?.data?.user ?? (data?.id && data);
 
-      // Context varsa bilgilendir
-      if (typeof login === "function") {
-        login({ user, accessToken });
+      if (!(status === 200 || status === 201) || !token) {
+        throw new Error("Token alınamadı");
       }
 
-      navigate("/pm/projects", { replace: true });
-    } catch (e) {
-      setErr(e?.response?.data?.message || e.message || "Giriş başarısız");
+      localStorage.setItem("accessToken", token);
+      api.defaults.headers.common.Authorization = `Bearer ${token}`;
+
+      if (typeof login === "function") login({ user, accessToken: token });
+
+      // Login başarılı -> doğrudan PM alanına
+      navigate("/pm", { replace: true });
+    } catch (er) {
+      const s = er?.response?.status;
+      if (s === 401) setErr("E-posta veya şifre hatalı.");
+      else setErr(er?.response?.data?.message || er.message || "Giriş başarısız");
     } finally {
       setLoading(false);
     }
   };
 
-  // — Stil (AdminLogin/UserLogin kart görünümü ile aynı) —
   const pageStyle = {
     display: "grid",
+    minHeight: "100vh",
     placeItems: "center",
-    height: "100vh",
     background: "#0e0f10",
     color: "#fff",
   };
   const cardStyle = {
-    background: "#222526",
-    padding: "2rem",
-    borderRadius: "16px",
-    boxShadow: "0 24px 60px rgba(0,0,0,.45)",
     width: "100%",
     maxWidth: 520,
+    background: "#222526",
+    padding: "2rem",
+    borderRadius: 16,
+    boxShadow: "0 24px 60px rgba(0,0,0,.45)",
     display: "flex",
     flexDirection: "column",
-    gap: "1rem",
+    gap: 12,
   };
   const inputStyle = {
+    width: "100%",
     background: "#111518",
     border: "1px solid #333",
-    borderRadius: "12px",
+    borderRadius: 12,
     color: "#fff",
     padding: "12px 14px",
-    outline: "none",
-    width: "100%",
   };
   const btnStyle = {
     background: "#0e7c66",
     color: "#fff",
     border: "none",
     padding: "12px",
-    borderRadius: "12px",
+    borderRadius: 12,
     cursor: "pointer",
-    width: "100%",
   };
 
   return (
     <div style={pageStyle}>
       <form style={cardStyle} onSubmit={submit}>
-        <h1 style={{ textAlign: "center", marginBottom: "-0.5rem" }}>Mirox</h1>
+        <h1 style={{ textAlign: "center", marginBottom: "-.5rem" }}>Mirox</h1>
         <h3 style={{ textAlign: "center", marginTop: "-8px" }}>Kullanıcı Girişi</h3>
 
         <label>
@@ -120,15 +125,15 @@ export default function UserLogin() {
 
         {err && <div style={{ color: "salmon" }}>{err}</div>}
 
-        <button disabled={loading} type="submit" style={btnStyle}>
+        <button type="submit" style={btnStyle} disabled={loading}>
           {loading ? "Giriş yapılıyor…" : "Giriş Yap"}
         </button>
 
         <p style={{ textAlign: "center", marginTop: 8 }}>
           Hesabınız yok mu?{" "}
-          <a href="/register" style={{ color: "#10b981", textDecoration: "none" }}>
+          <Link to="/register" style={{ color: "#10b981", textDecoration: "none" }}>
             Kayıt olun
-          </a>
+          </Link>
         </p>
       </form>
     </div>
